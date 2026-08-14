@@ -1,5 +1,3 @@
-Real Time Group Chat Application 
-
 # Real-Time Group Chat Application
 
 A real-time group chat application that allows multiple users to communicate simultaneously through a common chat room using WebSockets.
