@@ -2,17 +2,27 @@
 
 A real-time group chat application that allows multiple users to communicate simultaneously through a common chat room using WebSockets.
 
+The application uses client-side cryptographic keys for message authentication, AES-GCM for message confidentiality and integrity, and HTTPS/WSS for secure communication between clients and the server.
+
 ## Features
 
 * Multiple users can join the same chat room.
 * Each user chooses a unique username.
+* Usernames are case-insensitive and must be unique.
+* Usernames must be non-empty and no longer than 20 characters.
 * Messages are delivered to all connected users in real time.
 * Users are notified when another user joins or leaves the chat.
-* Chat messages are stored in a SQLite database.
-* When a user joins, the last 50 messages are loaded from the database and shown.
-* Empty messages are ignored.
-* Usernames must be non-empty and no longer than 20 characters.
-* Usernames are case-insensitive and must be unique.
+* Chat messages are encrypted using AES-GCM before being stored in the database.
+* Each message is digitally signed using the sender's RSA private key.
+* The server verifies message signatures before accepting messages.
+* The public key used to sign each message is stored alongside that message.
+* Historical messages are decrypted and signature-verified before being displayed.
+* Tampering with stored ciphertext causes AES-GCM integrity verification to fail.
+* Invalid or corrupted historical messages are rejected and not displayed.
+* Chat history is stored persistently in SQLite.
+* A new user receives the stored chat history when joining the room.
+* HTTPS is used for the frontend.
+* WSS (WebSocket Secure) is used for communication between the frontend and backend.
 * A single backend server handles all connected clients and broadcasts messages to them.
 
 ## Architecture
@@ -21,103 +31,39 @@ The application consists of:
 
 * **Backend:** Python WebSocket server using the `websockets` library.
 * **Frontend:** React application built with Vite.
-* **Communication:** WebSockets provide persistent, bidirectional communication between the frontend clients and backend server.
+* **Database:** SQLite database used to persist encrypted messages and their associated metadata.
+* **Communication:** WebSockets provide persistent, bidirectional communication between frontend clients and the backend.
+* **Transport Security:** HTTPS is used for the frontend and WSS is used for the WebSocket connection.
+* **Cryptography:** AES-GCM provides message confidentiality and integrity, while RSA-PSS signatures provide message authentication.
 
 ```text
-                 WebSocket
-      ┌──────────────────────────┐
-      │                          │
-   User 1 ─┐                    │
-   User 2 ─┤                    ▼
-   User 3 ─┼──────────────► Backend Server
-   User 4 ─┘                    │
-                                │
-                         Broadcast messages
-                                │
-                 ┌──────────────┼──────────────┐
-                 ▼              ▼              ▼
-              User 1         User 2         User 3 ...
-```
-
-## How It Works
-
-1. A client connects to the WebSocket server.
-2. The client sends its username as the first message.
-3. The server validates the username and checks that it is unique.
-4. Once registered, the server sends the recent chat history (from SQLite) to the new user.
-5. The user can then send chat messages.
-6. Whenever a message is received, the backend stores it in SQLite and broadcasts it to every connected client.
-7. When a user disconnects, the server removes them and broadcasts a notification to the remaining users.
-
-## Running the Application
-
-### Backend
-
-Install the Python dependency:
-
-```bash
-pip install websockets
-```
-
-Start the server:
-
-```bash
-python server.py
-```
-
-The WebSocket server runs on port `5000`.
-
-### Frontend
-
-Install the frontend dependencies:
-
-```bash
-cd frontend
-npm install
-```
-
-Start the development server:
-
-```bash
-npm run dev
-```
-
-The frontend can then be opened in a browser.
-
-## Project Structure
-
-```text
-chat-app/
-├── backend
-│   └── server.py
-├── chat-frontend
-│   ├── eslint.config.js
-│   ├── index.html
-│   ├── package.json
-│   ├── public
-│   │   ├── favicon.svg
-│   │   └── icons.svg
-│   ├── README.md
-│   ├── src
-│   │   ├── App.css
-│   │   ├── App.jsx
-│   │   ├── App1.jsx
-│   │   ├── assets
-│   │   │   ├── hero.png
-│   │   │   ├── react.svg
-│   │   │   └── vite.svg
-│   │   ├── index.css
-│   │   └── main.jsx
-│   └── vite.config.js
-└── README.md
-```
-
-## Technologies Used
-
-* Python
-* WebSockets
-* SQLite
-* React
-* Vite
-* JavaScript
-* HTML/CSS
+                         HTTPS
+              ┌────────────────────────┐
+              │                        │
+           User 1                   User 2
+              │                        │
+           User 3                   User 4
+              │                        │
+              └──────────┬─────────────┘
+                         │
+                        WSS
+                         │
+                         ▼
+                ┌───────────────────┐
+                │   Backend Server  │
+                │                   │
+                │ Python WebSocket  │
+                │     Server        │
+                └─────────┬─────────┘
+                          │
+                 ┌────────┴─────────┐
+                 │                  │
+                 ▼                  ▼
+          Message Processing     SQLite DB
+                 │
+        ┌────────┴────────┐
+        │                 │
+        ▼                 ▼
+   RSA-PSS Verify     AES-GCM
+                      Encrypt/
+                      Decrypt
