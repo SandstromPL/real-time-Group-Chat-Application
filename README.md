@@ -278,8 +278,6 @@ Project Structure
 chat-app/
 ├── backend
 │   ├── server.py
-│   ├── chat.db
-│   └── encryption.key
 │
 ├── chat-frontend
 │   ├── eslint.config.js
@@ -291,7 +289,6 @@ chat-app/
 │   ├── src
 │   │   ├── App.css
 │   │   ├── App.jsx
-│   │   ├── App1.jsx
 │   │   ├── assets
 │   │   │   ├── hero.png
 │   │   │   ├── react.svg
