@@ -1,7 +1,56 @@
 import { useRef, useState } from "react";
 import "./App.css";
 
-const WS_URL = "ws://0.0.0.0:5000";
+const WS_URL = "ws://0.0.0.0:9000";
+
+async function generateKeyPair() {
+  return await window.crypto.subtle.generateKey(
+    {
+      name: "RSA-PSS",
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: "SHA-256",
+    },
+    true,
+    ["sign", "verify"]
+  );
+}
+
+async function exportPublicKey(publicKey) {
+  const spki = await window.crypto.subtle.exportKey(
+    "spki",
+    publicKey
+  );
+
+  return arrayBufferToBase64(spki);
+}
+
+async function signMessage(privateKey, message) {
+  const data = new TextEncoder().encode(message);
+
+  const signature = await window.crypto.subtle.sign(
+    {
+      name: "RSA-PSS",
+      saltLength: 32,
+    },
+    privateKey,
+    data
+  );
+
+  return arrayBufferToBase64(signature);
+}
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary);
+}
 
 function formatTime(timestamp) {
   return new Date(timestamp).toLocaleTimeString([], {
@@ -17,13 +66,23 @@ function App() {
   const [input, setInput] = useState("");
 
   const socketRef = useRef(null);
+  const privateKeyRef = useRef(null);
 
-  function connect() {
+  async function connect() {
     const name = username.trim();
 
     if (!name) {
       return;
     }
+
+    // Generate signing key pair.
+    const keyPair = await generateKeyPair();
+
+    privateKeyRef.current = keyPair.privateKey;
+
+    const publicKey = await exportPublicKey(
+      keyPair.publicKey
+    );
 
     const socket = new WebSocket(WS_URL);
     socketRef.current = socket;
@@ -31,62 +90,115 @@ function App() {
     socket.onopen = () => {
       // Your backend expects the username as
       // the FIRST message after connection.
-      socket.send(name);
+      socket.send(
+        JSON.stringify({
+          type: "register",
+          username: name,
+          public_key: publicKey,
+        })
+      );
     };
 
     socket.onmessage = (event) => {
-      const payload = JSON.parse(event.data);
+        console.log("MESSAGE FROM SERVER:", event.data);
+      const data = JSON.parse(event.data);
 
-      if (payload.type === "error") {
-        alert(payload.message);
+        console.log("PARSED DATA:", data);
+    console.log("MESSAGE TYPE:", data.type);
+
+      if (data.type === "error") {
+        alert(data.message);
         socket.close();
         return;
       }
 
-      if (payload.type === "history") {
+      if (data.type === "history") {
+        {/*
         const history = payload.messages.map(
           (entry) =>
             `[${formatTime(entry.timestamp)}] ${entry.username}: ${entry.content}`,
         );
+        */}
 
-        setMessages(history);
+        setMessages(data.messages);
         setConnected(true);
         return;
       }
 
-      if (payload.type === "system") {
-        setMessages((previous) => [...previous, payload.content]);
+      if (data.type === "system") {
+
+        setMessages(
+          previous => [
+            ...previous,
+            {
+              system: true,
+              content: data.content,
+            },
+          ]
+        );
+      }
+
+      if (data.type === "chat") {
+
+        setMessages(
+          previous => [
+            ...previous,
+            {
+              username: data.username,
+              content: data.content,
+              timestamp: data.timestamp,
+            },
+          ]
+        );
+
         return;
-      }
-
-      if (payload.type === "chat") {
-        const line =
-          `[${formatTime(payload.timestamp)}] ${payload.username}: ${payload.content}`;
-
-        setMessages((previous) => [...previous, line]);
-      }
+      }    
     };
+
 
     socket.onclose = () => {
       setConnected(false);
+        privateKeyRef.current = null;
     };
 
-    socket.onerror = () => {
-      console.error("WebSocket error");
+    socket.onerror = (error) => {
+        console.error("WebSocket error:", error);
     };
   }
 
-  function sendMessage() {
+  async function sendMessage() {
     const message = input.trim();
 
     if (!message || !socketRef.current) {
       return;
     }
 
-    if (socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(message);
-      setInput("");
+    if (socketRef.current.readyState !== WebSocket.OPEN) {
+      return;
     }
+
+    if (!privateKeyRef.current) {
+      return;
+    }
+
+    // Sign the plaintext message.
+    const signature = await signMessage(
+      privateKeyRef.current,
+      message
+    );
+
+
+    socketRef.current.send(
+      JSON.stringify({
+        type: "chat",
+        content: message,
+        signature: signature,
+      })
+    );
+
+
+    setInput("");
+    
   }
 
   function handleKeyDown(event) {
@@ -98,6 +210,7 @@ function App() {
   function disconnect() {
     socketRef.current?.close();
     socketRef.current = null;
+    privateKeyRef.current = null;
     setMessages([]);
     setConnected(false);
   }
@@ -144,9 +257,30 @@ function App() {
 
         <div className="messages">
           {messages.map((message, index) => (
-            <div className="message" key={index}>
-              {message}
-            </div>
+            <div className={
+                  message.system
+                    ? "message system-message"
+                    : "message"
+                } 
+                key={index}>
+              {message.system ? (
+                    message.content
+                    ) : (
+                  <>
+                    <div>
+                      <strong>{message.username}</strong>
+                    </div>
+
+                    <div>
+                      {message.content}
+                    </div>
+
+                    <small>
+                      {new Date(message.timestamp).toLocaleString()}
+                    </small>
+                  </>
+                )}      
+              </div>
           ))}
         </div>
 
