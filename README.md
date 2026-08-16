@@ -208,7 +208,6 @@ When a user disconnects:
 
 The SQLite database contains a messages table with the following fields:
 
-* Field	Description
 * **id:**	Unique message identifier
 * **username:**	Username of the sender
 * **public_key:**	Public key used to verify the message signature
