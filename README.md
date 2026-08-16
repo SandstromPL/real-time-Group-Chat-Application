@@ -285,7 +285,6 @@ Project Structure
 chat-app/
 ├── backend
 │   ├── server.py
-│
 ├── chat-frontend
 │   ├── eslint.config.js
 │   ├── index.html
