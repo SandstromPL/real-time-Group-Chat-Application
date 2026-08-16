@@ -8,6 +8,8 @@ A real-time group chat application that allows multiple users to communicate sim
 * Each user chooses a unique username.
 * Messages are delivered to all connected users in real time.
 * Users are notified when another user joins or leaves the chat.
+* Chat messages are stored in a SQLite database.
+* When a user joins, the last 50 messages are loaded from the database and shown.
 * Empty messages are ignored.
 * Usernames must be non-empty and no longer than 20 characters.
 * Usernames are case-insensitive and must be unique.
@@ -42,9 +44,10 @@ The application consists of:
 1. A client connects to the WebSocket server.
 2. The client sends its username as the first message.
 3. The server validates the username and checks that it is unique.
-4. Once registered, the user can send chat messages.
-5. Whenever a message is received, the backend broadcasts it to every connected client.
-6. When a user disconnects, the server removes them and broadcasts a notification to the remaining users.
+4. Once registered, the server sends the recent chat history (from SQLite) to the new user.
+5. The user can then send chat messages.
+6. Whenever a message is received, the backend stores it in SQLite and broadcasts it to every connected client.
+7. When a user disconnects, the server removes them and broadcasts a notification to the remaining users.
 
 ## Running the Application
 
@@ -113,6 +116,7 @@ chat-app/
 
 * Python
 * WebSockets
+* SQLite
 * React
 * Vite
 * JavaScript

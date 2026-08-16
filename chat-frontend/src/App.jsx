@@ -1,7 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import "./App.css";
 
-const WS_URL = "ws://10.1.75.51:5265";
+const WS_URL = "ws://0.0.0.0:5000";
+
+function formatTime(timestamp) {
+  return new Date(timestamp).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 function App() {
   const [username, setUsername] = useState("");
@@ -28,18 +35,36 @@ function App() {
     };
 
     socket.onmessage = (event) => {
-      const message = event.data;
+      const payload = JSON.parse(event.data);
 
-      // Backend sends validation errors like:
-      // ERROR: Username already taken.
-      if (message.startsWith("ERROR:")) {
-        alert(message);
+      if (payload.type === "error") {
+        alert(payload.message);
         socket.close();
         return;
       }
 
-      setMessages((previous) => [...previous, message]);
-      setConnected(true);
+      if (payload.type === "history") {
+        const history = payload.messages.map(
+          (entry) =>
+            `[${formatTime(entry.timestamp)}] ${entry.username}: ${entry.content}`,
+        );
+
+        setMessages(history);
+        setConnected(true);
+        return;
+      }
+
+      if (payload.type === "system") {
+        setMessages((previous) => [...previous, payload.content]);
+        return;
+      }
+
+      if (payload.type === "chat") {
+        const line =
+          `[${formatTime(payload.timestamp)}] ${payload.username}: ${payload.content}`;
+
+        setMessages((previous) => [...previous, line]);
+      }
     };
 
     socket.onclose = () => {
