@@ -405,11 +405,24 @@ async def handle_client(websocket):
 
             print(f"{username}: {message}")
 
-            if not verify_signature(
+            signature_valid = verify_signature(
                 public_keys[username],
                 message,
                 signature,
-            ):
+                )
+
+            if signature_valid:
+                print(
+                    f"[SIGNATURE VERIFIED] "
+                    f"{username}: {message}"
+                )
+            else:
+                print(
+                    f"[SIGNATURE REJECTED] "
+                    f"{username}: {message}"
+                )
+
+            if not signature_valid:
                 await websocket.send(json.dumps({
                     "type": "error",
                     "message": "Invalid message signature.",
