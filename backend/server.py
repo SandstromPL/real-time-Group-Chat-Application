@@ -1,4 +1,5 @@
 import asyncio
+import ssl
 import base64
 import os
 import json
@@ -14,7 +15,7 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
 HOST = "0.0.0.0"
-PORT = 7000
+PORT = 5000
 
 DB_PATH = Path(__file__).with_name("chat.db")
 KEY_PATH = Path(__file__).with_name("encryption.key")
@@ -26,6 +27,15 @@ HISTORY_LIMIT = 50
 users = {}
 # username -> public signing key
 public_keys = {}
+
+ssl_context = ssl.SSLContext(
+    ssl.PROTOCOL_TLS_SERVER
+)
+
+ssl_context.load_cert_chain(
+    "/home/student/chat-ssl/cert.pem",
+    "/home/student/chat-ssl/key.pem",
+)
 
 # ---------------------------------------------------------
 # Encryption key
@@ -352,9 +362,10 @@ async def handle_client(websocket):
         except Exception as error:
             # Ignore corrupted/tampered messages.
             print(
-            "Could not load historical message:",
-            repr(error),)
-            continue
+        f"SECURITY ALERT: Message from "
+        f"{item['username']} failed "
+        f"integrity/decryption check: {repr(error)}")
+        continue
 
     await websocket.send(json.dumps({
         "type": "history",
@@ -451,6 +462,7 @@ async def main():
         handle_client,
         HOST,
         PORT,
+        ssl=ssl_context,
     ):
         print(f"WebSocket server running on ws://{HOST}:{PORT}")
         print(f"Database: {DB_PATH}")
