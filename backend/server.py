@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
 HOST = "0.0.0.0"
-PORT = 9000
+PORT = 7000
 
 DB_PATH = Path(__file__).with_name("chat.db")
 KEY_PATH = Path(__file__).with_name("encryption.key")
@@ -352,10 +352,9 @@ async def handle_client(websocket):
         except Exception as error:
             # Ignore corrupted/tampered messages.
             print(
-        f"SECURITY ALERT: Message from "
-        f"{item['username']} failed "
-        f"integrity/decryption check: {repr(error)}")
-        continue
+            "Could not load historical message:",
+            repr(error),)
+            continue
 
     await websocket.send(json.dumps({
         "type": "history",
