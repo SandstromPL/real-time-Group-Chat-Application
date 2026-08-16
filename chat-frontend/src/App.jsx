@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import "./App.css";
 
-const WS_URL = "ws://0.0.0.0:9000";
+const WS_URL = "wss://10.1.75.51:5266";
 
 async function generateKeyPair() {
   return await window.crypto.subtle.generateKey(
