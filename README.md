@@ -1,15 +1,15 @@
 # Real-Time Group Chat Application
 
+A real-time group chat application that allows multiple users to communicate simultaneously through a common chat room using WebSockets.
+
+The application uses client-side cryptographic keys for message authentication, AES-GCM for message confidentiality and integrity, and HTTPS/WSS for secure communication between clients and the server.
+
 ## Members:
 
 * Agastya Nath - 12340140
 * Galaba Vamsi - 12340770
 * Paritosh Lahre - 12341550
 * Y. Rahul Dev Reddy - 12342390
-
-A real-time group chat application that allows multiple users to communicate simultaneously through a common chat room using WebSockets.
-
-The application uses client-side cryptographic keys for message authentication, AES-GCM for message confidentiality and integrity, and HTTPS/WSS for secure communication between clients and the server.
 
 ## Features
 
