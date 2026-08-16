@@ -187,13 +187,13 @@ function App() {
       message
     );
 
-    const tamperedMessage = message + " TAMPERED";
+    // const tamperedMessage = message + " TAMPERED";
 
     socketRef.current.send(
       JSON.stringify({
         type: "chat",
-        content: tamperedMessage,
-	//content: message,
+        // content: tamperedMessage,
+	    content: message,
         signature: signature,
       })
     );
