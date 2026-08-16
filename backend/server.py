@@ -477,7 +477,7 @@ async def main():
         PORT,
         ssl=ssl_context,
     ):
-        print(f"WebSocket server running on ws://{HOST}:{PORT}")
+        print(f"WebSocket server running on wss://{HOST}:{PORT}")
         print(f"Database: {DB_PATH}")
         print("Waiting for clients...")
 
